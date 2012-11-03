@@ -4,7 +4,7 @@ module Encode
 ----------------------------------------------------------------
 -- Author:              Ron Watkins
 -- Created:             Thu Oct 25 01:43:36 CST 2012
--- Last modified:       Fri Nov  2 15:45:55 CST 2012
+-- Last Modified:       Sat Nov  3 16:50:40 CST 2012
 -- Program name:        encode.hs 
 -- Module name:         Encode
 -- Description: 
@@ -13,6 +13,16 @@ module Encode
 -- Usage:
 --  Run the function "showData" in ghci to view the node 
 --  placement of the given input file.
+-- Alternately:
+--  Run "nodes'" with an arbitrary integer as input to see your
+--  integer put correctly into nodes. No pretty output on this
+--  though. 
+-- To do:
+--  Take a binary file as input, then process it and output it
+--  into the different files depending on placement in the
+--  nodes. Im thinking Data.ByteString will be the trick to 
+--  getting the input/output stuff working correctly on
+--  arbitrarily sized data input.
 ----------------------------------------------------------------
 
 
@@ -22,6 +32,11 @@ module Encode
 
 import Data.List
 import Data.Char
+import Data.Word
+import Data.Bits hiding (rotate)
+import qualified Data.ByteString.Lazy as BL
+import System.IO
+import Control.Monad
 
 
 ----------------------------------------------------------------
@@ -32,29 +47,29 @@ import Data.Char
 -- n = storage nodes
 -- k = n-k erasures
 -- f = disks
-data Code = Code {n :: Int, k :: Int, f :: Int}
+data Code = Code {n :: Integer, k :: Integer, f :: Integer}
 
 -- Input file type
 -- Using an abritrary number for now, but should be a binary 
 -- input taken from the command line.
-data File = File {m :: Int}
+data File = File {m :: Integer}
 
 -- Chunk type
 -- Chunks are the broken/separated pieces of the original file
-data Chunk = Chunk {w :: Int}
+data Chunk = Chunk {w :: Integer}
 
 -- The matrix type. 
 -- Needs to be an abritrarily large number,
 -- so might need to migrate it away from [[Int]] and to something
 -- like [[Double]] or an arbritrarily large number. Maybe [[a]]. 
 -- Need to experiment a bit with it.
-type Matrix = [[Int]]
+type Matrix = [[Integer]]
 
 -- Chunk data type.
 -- These are the chunks that get arranged into each of the nodes.
 -- Same with matrix, this type needs to be changed to an arbritarily
 -- large real number. Maybe "Num" or "a"
-type Chunk' = Int
+type Chunk' = Integer
 type Xn = Chunk'
 type Yn = Chunk'
 type Sn = Chunk'
@@ -79,7 +94,7 @@ src = Code 4 2 2
 -- "File" data type. It will need to be changed to be taken as
 -- binary data input from the command line.
 file :: File
-file = File 324533 --Hard coded file for testing
+file = File 12424234234234324533 --Hard coded file for testing
 
 -- MDS generator matrix. See appendix for supplemental matrices
 mdsGen :: Matrix
@@ -135,6 +150,18 @@ s14 = rotate (zipWith (+) x14 y14) 2 :: [Sn]
 -- their correct intended placement on the server.
 nodes = zip3 x14 y14 s14 :: [Node]
 
+-- Make the lazy nodes' for parsing arbitrary input
+-- This can take an arbitrary integer and do all the processing
+-- to put everything into the correct nodes.
+nodes' n = zip3 x14' y14' s14' :: [Node]
+  where
+    x14' = rotate (concat $ f1f2' `multMatrix` mdsGen) 0 :: [Xn] 
+    y14' = rotate (concat $ f3f4' `multMatrix` mdsGen) 1 :: [Yn]
+    s14' = rotate (zipWith (+) x14' y14') 2 :: [Sn] 
+    f1f2' = [take 2 chunked'] :: Matrix
+    f3f4' = [drop 2 chunked'] :: Matrix
+    chunked' = map read chunking' :: [Chunk']
+    chunking' = chunk 4 (viewFile $ File n)
 
 ----------------------------------------------------------------
 --                        Data Display                        --
@@ -167,6 +194,11 @@ showData = do
 --                        Misc Functions                      --
 ----------------------------------------------------------------
 
+-- Add a list of digits together to make a single number which
+-- can be used as an 'integer'
+fromDigits = foldl addDigit 0
+    where addDigit num d = 10 * num + d
+
 -- Node extraction
 fstN :: Node -> Chunk'
 fstN (x,_,_) = x
@@ -193,12 +225,28 @@ multMatrix a b = [ [sum $ zipWith (*) ar bc | bc <- transpose b] | ar <- a]
 untabs :: [String] -> String
 untabs = concatMap (++ "\t")
 
+-- digitToInteger
+digitToInteger c
+    | isDigit c            =  ord c - ord '0'
+    | c >= 'a' && c <= 'f' =  ord c - ord 'a' + 10
+    | c >= 'A' && c <= 'F' =  ord c - ord 'A' + 10
+    | otherwise            =  error ("digitToInteger: not a digit " ++ show c) -- sigh
 
 ----------------------------------------------------------------
 --                        Data IO                             --
 ----------------------------------------------------------------
--- Nothing here yet.
 
+-- Data IO is currently still Under construction:
+-- Figure out how to import files as binary. Then work on them.
+--readFac = openBinaryFile "fac1.txt" ReadMode >>= (\x -> hGetContents x) >>= (\y -> return (take 5 y))
+readFac = openBinaryFile "fac1.txt" ReadMode >>= (\x -> hGetContents x) >>= (\y -> return (y))
+readFac' = readFac >>= (\x -> (return . read) x :: IO Integer)
+{--
+readFac' = do
+    x <- readFac
+    y <- read x :: Integer
+    putStrLn $ show $ y
+--}
 
 ----------------------------------------------------------------
 --                        Appendix                            --
