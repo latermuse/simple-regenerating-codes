@@ -15,6 +15,9 @@ module Main where
 --  Take binary data as input.
 -----------------------------------------------------------
 
+-- performance: .004 -> .007
+-- performance: .004 -> .005
+
 import qualified Data.ByteString as B
 import Data.List
 import Data.Binary
@@ -60,26 +63,44 @@ chunk n xs = chunk' i xs
     chunk' n xs = a : chunk' n b where (a,b) = splitAt n xs
     i = ceiling (fromIntegral (length xs) / fromIntegral n)
 
-fac :: (Enum a, Num a) => a -> a
-fac n = product [1..n]
-
 main = do
-    mapM (loop') (fileEncode 123123123123123123123)
+    mapM_ loop' (fileEncode 123123123123123123123)
     putStrLn "Done!"
 
 -- successfully encode and decode the nodes to a file and back
 encodeThis :: Show a => a -> IO ()
-encodeThis = (\x -> encodeFile "meow.txt" $! nodes x)
+encodeThis x = encodeFile "meow.txt" $! nodes x
 
 decodeThis = decodeFile "meow.txt" :: IO [Node]
 
+-- Just a loop function im playing with
 loop (x:xs) = do
-    putStrLn $ show x
-    if xs == [] then putStrLn "Loop Done" else loop (xs)
+    print x
+    if xs == [] then putStrLn "Loop Done" else loop xs
 
 --loop' :: (Integer,Node) -> Node
 loop' (a,b) = do
     encodeFile (show a) (show b)
-    putStrLn $ show a
-    putStrLn $ show b
+    print a
+    print b
 
+-- Working with binarystrings
+
+-- binary file length
+--bfLength = B.readFile "1" >>= (\x -> (return . B.length) x) 
+{-bfLength = do
+    x <- B.readFile "1"
+    let y = B.pack $ ((B.length x) `div` 4) 
+    return (chunk y x)
+      where
+        chunk n xs = B.split n xs 
+-}
+
+
+chunkBytes :: Int -> B.ByteString -> [B.ByteString]
+chunkBytes n xs = chunk' i xs
+  where
+    chunk' n xs
+        | B.null xs = []
+        | otherwise = a : chunk' n b where (a,b) = B.splitAt n xs
+    i = ceiling (fromIntegral (B.length xs) / fromIntegral n)
