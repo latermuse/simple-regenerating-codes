@@ -63,16 +63,6 @@ chunk n xs = chunk' i xs
 fac :: (Enum a, Num a) => a -> a
 fac n = product [1..n]
 
--- Experiment time.
---
---Without bytestring: 0.155s
---main = do
-    --putStrLn $ show $ nodes $ fac 10000 
-    --
-    
-
-    ------- This one works
-    --encodeFile "meow.txt" $! nodes $! product [1..10000]
 main = do
     mapM (loop') (fileEncode 123123123123123123123)
     putStrLn "Done!"
