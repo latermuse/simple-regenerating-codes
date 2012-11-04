@@ -8,6 +8,9 @@ module Main where
 --  This takes an arbitrary length integer as input, then
 --  splits it into 4 nodes and outputs each node as a 
 --  binary file into the current directory.
+-- Usage:
+--  Just run 'main' in ghci or compile with basic tags.
+--      example: ghc -o nodes nodes.hs
 -- To Do:
 --  Take binary data as input.
 -----------------------------------------------------------
